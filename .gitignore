@@ -1,0 +1,33 @@
+# Node
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+package-lock.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.pt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Specific
+frontback_end/backend/uploads/
+frontback_end/frontend/home/build/
+frontback_end/frontend/admin/build/
+model/uploads/
+model/runs/
+model/data/
+model/temp_downloads/
+model/merged_dataset_v2/
+GARBAGE-CLASSIFICATION-3-1/
+StreetLights-1/
+smart-city-1/
+model.zip

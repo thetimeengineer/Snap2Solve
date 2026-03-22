@@ -1,0 +1,104 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}}
+\fs24
+\b Civicfix - Backend Connection & Image Upload Guide\b0\par
+\par
+This document explains in simple English how the frontend connects to the backend, which files to change, and how image insertion (upload) is handled and stored on the backend.\par
+\par
+\b 1. Overview\b0\par
+- The frontend (React) communicates with the backend API at a base URL like: \i http://localhost:5000/api\i0 .\par
+- Important endpoints:\par
+  - \i POST /api/auth/login\i0  (login)\par
+  - \i POST /api/auth/register\i0  (register)\par
+  - \i GET/POST /api/issues\i0  (issues list/create)\par
+  - \i GET/PUT/DELETE /api/issues/:id\i0  (single issue)\par
+  - \i GET/POST /api/issues/:id/comments\i0  (comments)\par
+  - \i POST /api/issues/:id/attachments\i0  (upload image)\par
+  - \i GET /api/attachments/:id/signed-url\i0  (get signed URL for private S3 file)\par
+\par
+\b 2. Files to edit (frontend)\b0\par
+- `S2S_FD/ADMIN/src/utils/mockData.ts` - this file contains API helper functions. Use the helpers:\par
+  - `login(email, password)` and `register(name, email, password)` to authenticate. Helpers store a JWT token in localStorage.\par
+  - `fetchIssues()` to get issues list.\par
+  - `createIssue(data)` to create an issue (send JSON body).\par
+  - `createComment(issueId, body)` to post a comment.\par
+  - `uploadAttachment(issueId, file)` to upload an image file (multipart/form-data).\par
+\par
+- UI components to wire to the helpers:\par
+  - `S2S_FD/ADMIN/src/components/AuthForm.tsx` - call `login` / `register` instead of mock login.\par
+  - `S2S_FD/ADMIN/src/components/IssueTracker.tsx` - call `fetchIssues`, `createComment`.\par
+  - `S2S_FD/ADMIN/src/components/IssueDetailModal.tsx` - add a file input and call `uploadAttachment(issueId, file)`.\par
+  - `S2S_FD/ADMIN/src/components/IssueMap.tsx`, `CitizenProfile.tsx`, `AdminDashboard.tsx` - use `fetchIssues()` instead of in-file mock arrays.\par
+\par
+\b 3. Files to edit (backend)\b0\par
+- `backend/src/index.js` - base server setup, CORS, static uploads, security middlewares, and Swagger docs.\par
+- `backend/src/routes/auth.js` - register & login endpoints.\par
+- `backend/src/routes/issues.js` - create/list/get/update/delete issues.\par
+- `backend/src/routes/comments.js` - add/list comments.\par
+- `backend/src/routes/attachments.js` - handles file uploads (multipart) and saves metadata.\par
+- `backend/src/routes/attachmentSigned.js` - returns signed URLs for private S3 objects.\par
+- `backend/src/models/Attachment.js` - Attachment model stores `url` and `s3Key` (if uploaded to S3).\par
+\par
+\b 4. How image upload works (basic steps)\b0\par
+Frontend:\par
+1) User selects an image file in the UI (for example a `<input type=\"file\" />`).\par
+2) The component calls `uploadAttachment(issueId, file)` from `mockData.ts`.\par
+3) `uploadAttachment` creates a `FormData()` object, appends the file as field `file`, and POSTs to `POST /api/issues/:id/attachments` with the Authorization header (Bearer token) if logged in.\par
+\par
+Backend:\par
+1) Route `POST /api/issues/:id/attachments` is implemented in `backend/src/routes/attachments.js`.\par
+2) Multer middleware parses the multipart form. Two modes:\par
+   - Local disk mode (development): Multer stores the file in `backend/uploads/` and the URL returned is `/uploads/<filename>`.\par
+   - S3 mode (production optional): If `USE_S3=true`, multer uses memory storage. The server uploads the buffer to S3 with a key like `timestamp-originalname`. The object is saved as private by default.\par
+3) After saving (disk or S3), the server creates an `Attachment` document in MongoDB with fields:\par
+   - `issueId` (reference)\par
+   - `filename`\par
+   - `url` (if S3, the server returns a temporary signed URL for immediate access)\par
+   - `s3Key` (stored when using S3 so the server can generate new signed URLs later)\par
+4) The server returns the attachment metadata to the frontend (JSON). The frontend can show the image using the returned `url`.\par
+\par
+\b 5. Private S3 and signed URLs (how to view private images)\b0\par
+- Why signed URLs: Private S3 objects should not be public. Instead the server generates a temporary signed URL that allows limited-time GET access.\par
+- Flow:\par
+  1) After upload, `attachments` route stores the s3Key and returns a signed URL.\par
+  2) Later, when frontend needs to display the image, it can use the signed URL returned earlier, or call `GET /api/attachments/:id/signed-url` to request a fresh signed URL.\par
+  3) The server (authenticated) calls AWS SDK `getSignedUrlPromise('getObject', { Bucket, Key, Expires })` and returns the signed URL to the frontend.\par
+\par
+\b 6. Environment variables needed\b0\par
+- `MONGODB_URI` - MongoDB connection string (you already added this).\par
+- `JWT_SECRET` - secret for signing tokens.\par
+- `PORT` - server port (default 5000).\par
+- `UPLOAD_DIR` - local uploads folder (default `./uploads`).\par
+- For S3 mode (optional):\par
+  - `USE_S3=true`\par
+  - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`, `SIGNED_URL_EXPIRES` (seconds)\par
+\par
+\b 7. How to test locally (quick steps)\b0\par
+1) Start backend:\par
+   - `cd backend` \par
+   - `npm install` \par
+   - `npm run dev` \par
+2) Seed sample data (optional): `npm run seed` \par
+3) Start frontend admin (set `REACT_APP_API_BASE=http://localhost:5000/api` in `.env`) and run `npm start` in `S2S_FD/ADMIN`.\par
+4) Use Auth form to login (use seeded admin credentials from seed script), then open an issue detail and use the file input to upload an image.\par
+5) Verify backend saved file:\par
+   - For local disk: check `backend/uploads` for the saved filename and confirm `/uploads/<filename>` is accessible via browser.\par
+   - For S3: call `GET /api/attachments/:id/signed-url` to get a fresh signed URL and open it in the browser.\par
+\par
+\b 8. Notes & troubleshooting (basic)\b0\par
+- If file upload fails, check server logs. Common causes: missing `UPLOAD_DIR` permissions, multer errors, or missing AWS credentials.\par
+- Ensure frontend sends Authorization header: `Authorization: Bearer <token>` for routes that require auth.\par
+- If images do not show, inspect the returned `url` from the upload response. For private S3, the signed URL expires after a short time.\par
+\par
+\b 9. Summary (simple)\b0\par
+- Frontend uses helper functions to call backend API.\par
+- Image upload: frontend sends file to `POST /api/issues/:id/attachments` as `multipart/form-data`.\par
+- Backend saves file (disk or S3), stores metadata in MongoDB, and returns a link or signed URL.\par
+- To view private S3 images, frontend requests a signed URL from the server.\par
+\par
+If you want, I can also create a true `.docx` file and attach it, or convert this RTF to Word and push it to the repo. \par
+}
+
+
+
+

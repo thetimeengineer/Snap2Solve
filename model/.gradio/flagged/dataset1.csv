@@ -1,0 +1,2 @@
+Upload Image,Confidence Threshold,IoU Threshold,Detection Result,Prediction Summary,timestamp
+.gradio\flagged\Upload Image\1989d31d59aed317e7da\istockphoto-929942316-612x612.jpg,0.25,0.45,.gradio\flagged\Detection Result\899b4486cc489e408c09\image.webp,Total of 1 issues detected: 1 pothole detected.,2026-01-05 00:48:02.610657
