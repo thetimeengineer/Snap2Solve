@@ -33,12 +33,11 @@ services:
         value: https://snap2solve-home.onrender.com # Update after deployment
 
   # 3. Home Frontend (Static Site)
-  - type: web
+  - type: static_site
     name: snap2solve-home
-    env: static
     rootDir: frontback_end/frontend/home
     buildCommand: npm install && npm run build
-    staticPublishDir: build
+    publishDir: build
     envVars:
       - key: VITE_API_URL
         fromService:
@@ -47,12 +46,11 @@ services:
           property: host
 
   # 4. Admin Frontend (Static Site)
-  - type: web
+  - type: static_site
     name: snap2solve-admin
-    env: static
     rootDir: frontback_end/frontend/admin
     buildCommand: npm install && npm run build
-    staticPublishDir: build
+    publishDir: build
     envVars:
       - key: VITE_API_URL
         fromService:
