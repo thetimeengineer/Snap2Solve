@@ -1,0 +1,61 @@
+services:
+  # 1. AI Detection Server (FastAPI)
+  - type: web
+    name: snap2solve-ai
+    env: python
+    rootDir: model
+    plan: starter # YOLOv8 needs at least starter plan for RAM
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MODEL_PATH
+        value: yolov8m.pt # Or your best.pt path
+
+  # 2. Backend Server (Node.js)
+  - type: web
+    name: snap2solve-backend
+    env: node
+    rootDir: frontback_end/backend
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false # User must provide this in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AI_SERVER_URL
+        fromService:
+          name: snap2solve-ai
+          type: web
+          property: host
+      - key: FRONTEND_URL
+        value: https://snap2solve-home.onrender.com # Update after deployment
+
+  # 3. Home Frontend (Static Site)
+  - type: web
+    name: snap2solve-home
+    env: static
+    rootDir: frontback_end/frontend/home
+    buildCommand: npm install && npm run build
+    staticPublishDir: build
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: snap2solve-backend
+          type: web
+          property: host
+
+  # 4. Admin Frontend (Static Site)
+  - type: web
+    name: snap2solve-admin
+    env: static
+    rootDir: frontback_end/frontend/admin
+    buildCommand: npm install && npm run build
+    staticPublishDir: build
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: snap2solve-backend
+          type: web
+          property: host
