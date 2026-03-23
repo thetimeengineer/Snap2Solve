@@ -12,7 +12,7 @@ package-lock.json
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-*.pt
+# *.pt  # Temporarily allow best.pt if needed, but best practice is to keep it ignored if using cloud storage
 
 # OS
 .DS_Store
