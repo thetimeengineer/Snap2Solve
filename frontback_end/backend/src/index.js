@@ -29,6 +29,7 @@ const app = express();
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  process.env.ADMIN_URL,
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:3000",
@@ -37,9 +38,16 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === "development") {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = allowedOrigins.some(allowed => origin.includes(allowed) || origin === allowed);
+    const isVercel = origin.endsWith(".vercel.app");
+
+    if (isAllowed || isVercel || process.env.NODE_ENV === "development") {
       callback(null, true);
     } else {
+      console.log("CORS Blocked Origin:", origin);
       callback(new Error("Not allowed by CORS"));
     }
   },
