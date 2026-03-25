@@ -87,21 +87,30 @@ router.post('/', auth, upload.single("image"), async (req, res, next) => {
 router.post('/detect', auth, upload.single("image"), async (req, res) => {
 
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image provided" });
+    }
 
     const imagePath = req.file.path;
+    console.log(`DEBUG: Detecting issues in image: ${imagePath}`);
 
     const form = new FormData();
     form.append("file", fs.createReadStream(imagePath));
 
     const aiServerUrl = process.env.AI_SERVER_URL || "http://127.0.0.1:8000";
+    console.log(`DEBUG: Calling AI Server at: ${aiServerUrl}/detect`);
 
     const aiResponse = await axios.post(
       `${aiServerUrl}/detect`,
       form,
-      { headers: form.getHeaders() }
+      { 
+        headers: form.getHeaders(),
+        timeout: 30000 // 30 second timeout for AI server wake-up
+      }
     );
 
     const aiData = aiResponse.data;
+    console.log(`DEBUG: AI Server Response:`, aiData);
 
     res.json({
       message: "AI detection completed",
@@ -112,11 +121,21 @@ router.post('/detect', auth, upload.single("image"), async (req, res) => {
     });
 
   } catch (error) {
-
-    console.error(error);
+    console.error("ERROR: AI Detection Failed");
+    if (error.response) {
+      // AI server responded with an error
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Data:`, error.response.data);
+    } else if (error.request) {
+      // No response from AI server
+      console.error(`No response from AI server at ${process.env.AI_SERVER_URL}`);
+    } else {
+      console.error(`Error: ${error.message}`);
+    }
 
     res.status(500).json({
-      message: "AI detection failed"
+      message: "AI detection failed. The AI server might be offline or waking up. Please try again in a few seconds.",
+      error: error.message
     });
   }
 });

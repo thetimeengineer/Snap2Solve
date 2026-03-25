@@ -89,6 +89,8 @@ def health():
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
+    if model is None:
+        return {"error": "Model is still loading or failed to load. Please try again in a few seconds."}, 503
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
