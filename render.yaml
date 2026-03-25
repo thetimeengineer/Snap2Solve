@@ -37,7 +37,10 @@ services:
           type: web
           property: host
       - key: FRONTEND_URL
-        value: https://snap2solve-home.onrender.com # Update after deployment
+        fromService:
+          name: snap2solve-home
+          type: web
+          property: host
     healthCheckPath: /api/health
 
   # 3. Home Frontend (Static Site)
@@ -46,7 +49,7 @@ services:
     env: static
     rootDir: frontback_end/frontend/home
     buildCommand: npm install && npm run build
-    publishDir: build
+    publishDir: dist
     envVars:
       - key: VITE_API_URL
         fromService:
@@ -60,7 +63,7 @@ services:
     env: static
     rootDir: frontback_end/frontend/admin
     buildCommand: npm install && npm run build
-    publishDir: build
+    publishDir: dist
     envVars:
       - key: VITE_API_URL
         fromService:
