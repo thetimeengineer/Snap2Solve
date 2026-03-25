@@ -12,7 +12,8 @@ package-lock.json
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-# *.pt  # Temporarily allow best.pt if needed, but best practice is to keep it ignored if using cloud storage
+# Allow model weights in the model directory
+!model/best.pt
 
 # OS
 .DS_Store

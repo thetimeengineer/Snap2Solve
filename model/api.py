@@ -19,7 +19,9 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Load trained model
-MODEL_PATH = os.getenv("MODEL_PATH", "runs/smart_city_efficient_yolo112/weights/best.pt")
+# Use relative path for deployment
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(BASE_DIR, "best.pt"))
 model = YOLO(MODEL_PATH)
 
 # Map issue to department
