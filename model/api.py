@@ -14,22 +14,28 @@ async def lifespan(app: FastAPI):
     # Load trained model on startup
     global model
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    # Prefer relative path for deployment unless explicitly set to a valid local path
-    MODEL_PATH = os.getenv("MODEL_PATH", "best.pt")
+    # Force use best.pt in the same directory as api.py for Render
+    MODEL_FILENAME = "best.pt"
+    MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
     
-    # If it's a relative path, join it with BASE_DIR
-    if not os.path.isabs(MODEL_PATH):
-        MODEL_PATH = os.path.join(BASE_DIR, MODEL_PATH)
-    
-    print(f"DEBUG: Current directory is {os.getcwd()}")
-    print(f"DEBUG: BASE_DIR is {BASE_DIR}")
-    print(f"DEBUG: Attempting to load model from: {MODEL_PATH}")
+    print(f"DEBUG: STARTUP LOGS")
+    print(f"DEBUG: Current directory (os.getcwd()): {os.getcwd()}")
+    print(f"DEBUG: BASE_DIR (api.py location): {BASE_DIR}")
+    print(f"DEBUG: Checking for model at: {MODEL_PATH}")
     
     if not os.path.exists(MODEL_PATH):
-        print(f"ERROR: Model file NOT FOUND at {MODEL_PATH}")
-        # List files in BASE_DIR for debugging
-        print(f"Files in {BASE_DIR}: {os.listdir(BASE_DIR)}")
+        print(f"ERROR: Model file {MODEL_FILENAME} NOT FOUND at {MODEL_PATH}")
+        print(f"DEBUG: Directory contents of {BASE_DIR}: {os.listdir(BASE_DIR)}")
+        # Try to find any .pt file as a fallback
+        pt_files = [f for f in os.listdir(BASE_DIR) if f.endswith('.pt')]
+        if pt_files:
+            print(f"DEBUG: Found alternative model files: {pt_files}")
+            MODEL_PATH = os.path.join(BASE_DIR, pt_files[0])
+            print(f"DEBUG: Falling back to {MODEL_PATH}")
+        else:
+            raise FileNotFoundError(f"Could not find {MODEL_FILENAME} or any .pt file in {BASE_DIR}")
     
+    print(f"DEBUG: Loading YOLO model from {MODEL_PATH}...")
     model = YOLO(MODEL_PATH)
     yield
     # Clean up on shutdown

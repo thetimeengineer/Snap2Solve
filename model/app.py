@@ -7,7 +7,14 @@ import os
 # 1. Load your YOLO model
 # Use relative path for deployment
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(BASE_DIR, "best.pt"))
+MODEL_FILENAME = "best.pt"
+MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
+
+print(f"DEBUG: Checking for model at: {MODEL_PATH}")
+if not os.path.exists(MODEL_PATH):
+    print(f"ERROR: Model file NOT FOUND at {MODEL_PATH}")
+    print(f"Files in {BASE_DIR}: {os.listdir(BASE_DIR)}")
+
 model = YOLO(MODEL_PATH) 
 
 def predict_image(image, conf_threshold, iou_threshold):
