@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5003/api";
+export const API_BASE = import.meta.env.VITE_API_URL || "https://snap2solve.onrender.com/api";
 
 const TOKEN_KEY = "civicfix_admin_token";
 
