@@ -10,6 +10,10 @@ services:
     envVars:
       - key: MODEL_PATH
         value: best.pt
+      - key: YOLO_CONFIG_DIR
+        value: /tmp
+      - key: PYTHONUNBUFFERED
+        value: "1"
     healthCheckPath: /health
 
   # 2. Backend Server (Node.js)

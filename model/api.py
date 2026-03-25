@@ -14,8 +14,22 @@ async def lifespan(app: FastAPI):
     # Load trained model on startup
     global model
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(BASE_DIR, "best.pt"))
-    print(f"Loading model from {MODEL_PATH}...")
+    # Prefer relative path for deployment unless explicitly set to a valid local path
+    MODEL_PATH = os.getenv("MODEL_PATH", "best.pt")
+    
+    # If it's a relative path, join it with BASE_DIR
+    if not os.path.isabs(MODEL_PATH):
+        MODEL_PATH = os.path.join(BASE_DIR, MODEL_PATH)
+    
+    print(f"DEBUG: Current directory is {os.getcwd()}")
+    print(f"DEBUG: BASE_DIR is {BASE_DIR}")
+    print(f"DEBUG: Attempting to load model from: {MODEL_PATH}")
+    
+    if not os.path.exists(MODEL_PATH):
+        print(f"ERROR: Model file NOT FOUND at {MODEL_PATH}")
+        # List files in BASE_DIR for debugging
+        print(f"Files in {BASE_DIR}: {os.listdir(BASE_DIR)}")
+    
     model = YOLO(MODEL_PATH)
     yield
     # Clean up on shutdown

@@ -2,8 +2,13 @@ import gradio as gr
 from ultralytics import YOLO
 from PIL import Image
 
+import os
+
 # 1. Load your YOLO model
-model = YOLO(r"s:\LASTY_P_S2S\model\runs\smart_city_efficient_yolo112\weights\best.pt") 
+# Use relative path for deployment
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(BASE_DIR, "best.pt"))
+model = YOLO(MODEL_PATH) 
 
 def predict_image(image, conf_threshold, iou_threshold):
     """
