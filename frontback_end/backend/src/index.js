@@ -129,13 +129,14 @@ app.use(errorHandler);
 /* ---------------- SERVER ---------------- */
 
 const PORT = process.env.PORT || 5000;
+const HOST = "0.0.0.0"; // Explicitly bind to all interfaces for Render
 
 async function startServer() {
   try {
     await connectDatabase();
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    app.listen(PORT, HOST, () => {
+      console.log(`🚀 Server running on port ${PORT} at ${HOST}`);
       console.log(`📄 Swagger Docs: http://localhost:${PORT}/api/docs`);
       console.log(`❤️ Health Check: http://localhost:${PORT}/api/health`);
     });

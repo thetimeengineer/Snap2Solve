@@ -9,7 +9,8 @@ services:
     startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MODEL_PATH
-        value: yolov8m.pt # Or your best.pt path
+        value: best.pt
+    healthCheckPath: /health
 
   # 2. Backend Server (Node.js)
   - type: web
@@ -20,8 +21,10 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
+      - key: PORT
+        value: 10000
       - key: MONGODB_URI
-        sync: false # User must provide this in Render dashboard
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: AI_SERVER_URL
@@ -31,6 +34,7 @@ services:
           property: host
       - key: FRONTEND_URL
         value: https://snap2solve-home.onrender.com # Update after deployment
+    healthCheckPath: /api/health
 
   # 3. Home Frontend (Static Site)
   - type: web

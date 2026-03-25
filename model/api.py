@@ -4,7 +4,24 @@ from ultralytics import YOLO
 import shutil
 import os
 
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+# Global model variable
+model = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load trained model on startup
+    global model
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(BASE_DIR, "best.pt"))
+    print(f"Loading model from {MODEL_PATH}...")
+    model = YOLO(MODEL_PATH)
+    yield
+    # Clean up on shutdown
+    model = None
+
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS for backend proxy
 app.add_middleware(
@@ -17,12 +34,6 @@ app.add_middleware(
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Load trained model
-# Use relative path for deployment
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(BASE_DIR, "best.pt"))
-model = YOLO(MODEL_PATH)
 
 # Map issue to department
 department_map = {
@@ -50,7 +61,11 @@ department_map = {
 
 @app.get("/")
 def home():
-    return {"message": "Civic Issue AI Detection API Running"}
+    return {"message": "AI Detection Server is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model_loaded": model is not None}
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
