@@ -130,6 +130,7 @@ export function ReportIssue({ onBack, onSubmit }: ReportIssueProps) {
 
   const runAiDetection = async (file: File) => {
     setIsAnalyzing(true);
+    setAiAnalysis(null); // Reset previous analysis
     try {
       const formData = new FormData();
       formData.append("image", file);
@@ -142,47 +143,29 @@ export function ReportIssue({ onBack, onSubmit }: ReportIssueProps) {
         body: formData
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "AI Server error");
+      }
+
       const data = await res.json();
       console.log("AI Result:", data);
       setAiAnalysis(data);
-
-      // AUTO SELECT CATEGORY
-      const prediction = data.prediction?.toLowerCase() || "";
-      
-      if (prediction.includes("road") || prediction.includes("pothole")) {
-        setSelectedCategory("roads")
-        setPriority("High")
-      } else if (prediction.includes("lighting") || prediction.includes("streetlight")) {
-        setSelectedCategory("lighting")
-        setPriority("Medium")
-      } else if (prediction.includes("sanitation") || prediction.includes("garbage") || prediction.includes("waste")) {
-        setSelectedCategory("sanitation")
-        setPriority("Medium")
-      } else if (prediction.includes("water") || prediction.includes("leak") || prediction.includes("flood")) {
-        setSelectedCategory("water")
-        setPriority("High")
-      } else if (prediction.includes("vandalism") || prediction.includes("graffiti")) {
-        setSelectedCategory("vandalism")
-        setPriority("Medium")
-      } else if (prediction.includes("traffic") || prediction.includes("signal")) {
-        setSelectedCategory("traffic")
-        setPriority("Medium")
-      } else if (prediction.includes("park") || prediction.includes("tree")) {
-        setSelectedCategory("parks")
-        setPriority("Low")
-      }
-    } catch (error) {
+      processAiResult(data);
+      return data;
+    } catch (error: any) {
       console.error("AI detection failed", error);
+      alert(`AI Analysis: ${error.message}. You can still try to select a category manually if the image is clear.`);
+      return null;
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   const processAiResult = (aiResult: any) => {
-    if (!aiResult) return;
-    setAiAnalysis(aiResult);
+    if (!aiResult || !aiResult.prediction) return;
 
-    const prediction = aiResult.prediction?.toLowerCase() || "";
+    const prediction = aiResult.prediction.toLowerCase();
     const categoryMap: { [key: string]: { category: string; priority: string } } = {
       pothole: { category: "roads", priority: "High" },
       road: { category: "roads", priority: "High" },
@@ -282,7 +265,8 @@ export function ReportIssue({ onBack, onSubmit }: ReportIssueProps) {
 
     try {
       // FAKE ISSUE CHECK: Block if AI finds no relevant objects
-      if (!aiAnalysis || !aiAnalysis.all_detections || aiAnalysis.all_detections.length === 0) {
+      // If AI failed (no aiAnalysis), we allow manual submission to not block the user
+      if (aiAnalysis && (!aiAnalysis.all_detections || aiAnalysis.all_detections.length === 0)) {
         alert("This does not appear to be a valid civic issue. Please submit a photo of a real issue like a pothole, garbage, or vandalism.");
         setIsSubmitting(false);
         return;
