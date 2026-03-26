@@ -6,39 +6,41 @@ import os
 
 from contextlib import asynccontextmanager
 
+import threading
+
 # Global model variable
 model = None
+is_loading = False
+
+def load_model_task():
+    global model, is_loading
+    is_loading = True
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        MODEL_FILENAME = "best.pt"
+        MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
+        
+        print(f"DEBUG: Background loading started...")
+        if not os.path.exists(MODEL_PATH):
+            print(f"ERROR: {MODEL_FILENAME} not found at {MODEL_PATH}")
+            return
+            
+        print(f"DEBUG: Loading YOLO model from {MODEL_PATH}...")
+        model = YOLO(MODEL_PATH)
+        print(f"DEBUG: Model loaded successfully!")
+    except Exception as e:
+        print(f"ERROR: Failed to load model: {e}")
+    finally:
+        is_loading = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load trained model on startup
-    global model
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    # Force use best.pt in the same directory as api.py for Render
-    MODEL_FILENAME = "best.pt"
-    MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
-    
-    print(f"DEBUG: STARTUP LOGS")
-    print(f"DEBUG: Current directory (os.getcwd()): {os.getcwd()}")
-    print(f"DEBUG: BASE_DIR (api.py location): {BASE_DIR}")
-    print(f"DEBUG: Checking for model at: {MODEL_PATH}")
-    
-    if not os.path.exists(MODEL_PATH):
-        print(f"ERROR: Model file {MODEL_FILENAME} NOT FOUND at {MODEL_PATH}")
-        print(f"DEBUG: Directory contents of {BASE_DIR}: {os.listdir(BASE_DIR)}")
-        # Try to find any .pt file as a fallback
-        pt_files = [f for f in os.listdir(BASE_DIR) if f.endswith('.pt')]
-        if pt_files:
-            print(f"DEBUG: Found alternative model files: {pt_files}")
-            MODEL_PATH = os.path.join(BASE_DIR, pt_files[0])
-            print(f"DEBUG: Falling back to {MODEL_PATH}")
-        else:
-            raise FileNotFoundError(f"Could not find {MODEL_FILENAME} or any .pt file in {BASE_DIR}")
-    
-    print(f"DEBUG: Loading YOLO model from {MODEL_PATH}...")
-    model = YOLO(MODEL_PATH)
+    # Start loading the model in a separate thread so we don't block the port binding
+    thread = threading.Thread(target=load_model_task)
+    thread.start()
     yield
     # Clean up on shutdown
+    global model
     model = None
 
 app = FastAPI(lifespan=lifespan)
@@ -85,12 +87,18 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model_loaded": model is not None}
+    return {
+        "status": "ok", 
+        "model_loaded": model is not None,
+        "is_loading": is_loading
+    }
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
     if model is None:
-        return {"error": "Model is still loading or failed to load. Please try again in a few seconds."}, 503
+        if is_loading:
+            return {"error": "AI Model is still loading in the background. Please try again in 10-20 seconds."}, 503
+        return {"error": "AI Model failed to load. Please check server logs."}, 503
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
