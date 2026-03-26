@@ -105,7 +105,7 @@ router.post('/detect', auth, upload.single("image"), async (req, res) => {
       form,
       { 
         headers: form.getHeaders(),
-        timeout: 30000 // 30 second timeout for AI server wake-up
+        timeout: 90000 // 90 second timeout - YOLO inference on Render Free is slow (30-50s)
       }
     );
 
