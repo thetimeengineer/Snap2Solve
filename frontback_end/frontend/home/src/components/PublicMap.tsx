@@ -129,9 +129,10 @@ export function PublicMap({ onBack }: PublicMapProps) {
                         Priority: <span className={issue.priority === "High" ? "text-red-500" : ""}>{issue.priority}</span>
                       </div>
                     </CardContent>
-                  </Popup>
-                </Marker>
-              </div>
+                  </Card>
+                </Popup>
+              </Marker>
+            </div>
           ))}
         </MapContainer>
 
