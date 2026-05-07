@@ -141,6 +141,55 @@ router.post('/detect', auth, upload.single("image"), async (req, res) => {
 });
 
 
+// -------------------- DUPLICATE CHECK --------------------
+router.post('/check-duplicate', auth, async (req, res) => {
+  try {
+    const { category, location, radius = 50 } = req.body; // radius in meters
+
+    if (!location || !location.coordinates) {
+      return res.status(400).json({ message: "Location is required for duplicate check" });
+    }
+
+    const [lng, lat] = location.coordinates;
+
+    // Find issues of same category within X meters
+    const duplicates = await Issue.find({
+      category,
+      status: { $in: ["reported", "acknowledged", "in-progress", "open"] },
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [lng, lat]
+          },
+          $maxDistance: radius
+        }
+      }
+    }).limit(3);
+
+    res.json({
+      isDuplicate: duplicates.length > 0,
+      existingIssues: duplicates
+    });
+
+  } catch (error) {
+    console.error("Duplicate check failed:", error);
+    res.status(500).json({ message: "Duplicate check failed" });
+  }
+});
+
+// -------------------- ALL ISSUES FOR MAP --------------------
+router.get('/all-for-map', async (req, res) => {
+  try {
+    const issues = await Issue.find({}, 'title status category location priority createdAt')
+      .sort({ createdAt: -1 });
+    res.json(issues);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // -------------------- LIST ISSUES --------------------
 router.get('/', async (req, res) => {
 

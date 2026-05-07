@@ -6,7 +6,8 @@ import {
   Shield,
   User,
   Menu,
-  X
+  X,
+  Map as MapIcon
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -24,6 +25,7 @@ export function Navigation({ currentPage, onNavigate, user, onLogout }: Navigati
     { id: 'home', label: 'Home', icon: Home },
     { id: 'report', label: 'Report Issue', icon: Plus },
     { id: 'issues', label: 'Issues', icon: List },
+    { id: 'map', label: 'Heatmap', icon: MapIcon },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 

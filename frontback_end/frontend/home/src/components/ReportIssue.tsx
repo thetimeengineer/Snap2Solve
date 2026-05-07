@@ -30,7 +30,8 @@ export function ReportIssue({ onBack, onSubmit }: ReportIssueProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [isCheckingDuplicates, setIsCheckingCheckingDuplicates] = useState(false);
 
 
   const categories = [
@@ -42,6 +43,43 @@ export function ReportIssue({ onBack, onSubmit }: ReportIssueProps) {
     { id: "traffic", name: "Traffic" },
     { id: "parks", name: "Parks" }
   ];
+
+  const checkForDuplicates = async (category: string, coords: { lat: number; lng: number }) => {
+    if (!category || !coords) return;
+    setIsCheckingCheckingDuplicates(true);
+    try {
+      const res = await fetch(`${API_BASE}/issues/check-duplicate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          category,
+          location: {
+            type: "Point",
+            coordinates: [coords.lng, coords.lat]
+          },
+          radius: 100 // Check within 100 meters
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDuplicates(data.existingIssues || []);
+      }
+    } catch (err) {
+      console.error("Duplicate check failed:", err);
+    } finally {
+      setIsCheckingCheckingDuplicates(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory && coordinates) {
+      checkForDuplicates(selectedCategory, coordinates);
+    }
+  }, [selectedCategory, coordinates]);
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -410,6 +448,28 @@ export function ReportIssue({ onBack, onSubmit }: ReportIssueProps) {
                 ))}
               </div>
             </div>
+
+            {/* DUPLICATE WARNING */}
+            {duplicates.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center gap-2 text-amber-800 font-semibold">
+                  <Eye className="h-5 w-5" />
+                  Similar issues found nearby
+                </div>
+                <p className="text-sm text-amber-700">
+                  There are already {duplicates.length} issues of this type reported in this exact area. 
+                  You can still submit your report, but please check if it's a new issue or just the same one.
+                </p>
+                <div className="flex flex-col gap-2 mt-2">
+                  {duplicates.map((dup, index) => (
+                    <div key={index} className="text-xs bg-white/50 p-2 rounded border border-amber-100 flex justify-between items-center">
+                      <span>{dup.title} ({dup.status})</span>
+                      <span className="text-slate-400">{new Date(dup.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* PRIORITY */}
             <div className="flex items-center gap-4">

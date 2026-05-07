@@ -7,6 +7,7 @@ import { ReportIssue } from './components/ReportIssue'
 import { IssueListPage } from './components/IssueListPage'
 import { ProfilePage } from './components/ProfilePage'
 import { AuthForm } from './components/AuthForm'
+import { PublicMap } from './components/PublicMap'
 import { API_BASE, getToken, clearToken } from './utils/api'
 
 export type Issue = {
@@ -327,6 +328,9 @@ export default function App() {
             onUpdateUser={setCurrentUser}
           />
         )
+
+      case 'map':
+        return <PublicMap onBack={() => handleNavigate('home')} />
 
       default:
         return <LandingPage onNavigate={handleNavigate} />
