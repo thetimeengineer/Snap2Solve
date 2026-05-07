@@ -49,7 +49,7 @@ export type User = {
 }
 
 export default function App() {
-
+  console.log("App Version: 1.1.0 - Extraordinary Features Active");
   const [currentPage, setCurrentPage] = useState('home')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [issues, setIssues] = useState<Issue[]>([])
